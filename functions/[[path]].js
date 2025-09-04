@@ -105,9 +105,9 @@ export async function onRequest(context) {
     if (request.method === "GET") {
         // Jika path adalah root ('/'), atau dimulai dengan '/api/',
         // jangan coba redirect, biarkan Pages yang menanganinya.
-        if (url.pathname === '/' |
+        if (url.pathname === '/' 
 
-| url.pathname.startsWith('/api/')) {
+ url.pathname.startsWith('/api/')) {
             // Lanjutkan ke penanganan file statis oleh Pages
         } else {
             // Jika path bukan root dan bukan API, asumsikan itu adalah short code dan coba redirect.
