@@ -1,55 +1,8 @@
-// functions/api/links.js
+// functions/[[path]].js
 
 /**
- * Fungsi utama yang menangani semua permintaan ke /api/links.
- * @param {object} context - Konteks permintaan, berisi request, env, dll.
- */
-export async function onRequest(context) {
-  // Memeriksa metode HTTP dari permintaan (GET, POST, dll.)
-  if (context.request.method === "GET") {
-    // Menangani permintaan pengalihan dari path URL
-    // Contoh: 0on.qzz.io/my-slug -> akan ditangani di sini
-    const url = new URL(context.request.url);
-    if (url.pathname.startsWith('/api/links')) {
-        // Permintaan GET ke endpoint API itu sendiri, bukan untuk redirect
-        return new Response('Endpoint ini untuk membuat link pendek (POST) atau redirect (GET di root).', { status: 405 });
-    }
-    return await handleRedirect(context);
-  }
-
-  if (context.request.method === "POST") {
-    // Menangani pembuatan link baru
-    return await handleCreateLink(context);
-  }
-
-  // Jika metode bukan GET atau POST, kembalikan error
-  return new Response("Metode tidak diizinkan", { status: 405 });
-}
-
-/**
- * Menangani pengalihan URL pendek.
- * @param {object} context - Konteks permintaan.
- */
-async function handleRedirect({ request, env }) {
-  const url = new URL(request.url);
-  const shortCode = url.pathname.slice(1);
-
-  if (!shortCode) {
-    return new Response("Silakan masukkan kode pendek.", { status: 400 });
-  }
-
-  const longUrl = await env.URL_STORE.get(shortCode);
-
-  if (longUrl === null) {
-    return new Response("URL pendek tidak ditemukan.", { status: 404 });
-  }
-
-  return Response.redirect(longUrl, 302);
-}
-
-/**
- * Menangani pembuatan link pendek baru.
- * @param {object} context - Konteks permintaan.
+ * Fungsi untuk menangani pembuatan link pendek baru (POST requests).
+ * @param {object} context - Konteks permintaan dari Cloudflare.
  */
 async function handleCreateLink({ request, env }) {
   let requestBody;
@@ -92,12 +45,34 @@ async function handleCreateLink({ request, env }) {
 
   await env.URL_STORE.put(shortCode, longUrl);
 
-  const shortUrl = `${new URL(request.url).origin}/${shortCode}`;
+  const baseUrl = new URL(request.url).origin;
+  const shortUrl = `${baseUrl}/${shortCode}`;
 
   return new Response(JSON.stringify({ shortUrl }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+/**
+ * Fungsi untuk menangani pengalihan URL pendek (GET requests).
+ * @param {object} context - Konteks permintaan dari Cloudflare.
+ */
+async function handleRedirect({ request, env }) {
+  const url = new URL(request.url);
+  const shortCode = url.pathname.slice(1);
+
+  if (!shortCode) {
+    return new Response("Kode pendek tidak valid.", { status: 400 });
+  }
+
+  const longUrl = await env.URL_STORE.get(shortCode);
+
+  if (longUrl === null) {
+    return new Response("URL pendek tidak ditemukan.", { status: 404 });
+  }
+
+  return Response.redirect(longUrl, 302);
 }
 
 /**
@@ -113,45 +88,34 @@ function generateRandomString(length) {
   return result;
 }
 
-// Perbaikan pada onRequest untuk menangani GET ke root domain
-export async function onRequestGet(context) {
-    return await handleRedirect(context);
-}
-
-export async function onRequestPost(context) {
-    const url = new URL(context.request.url);
-    if (url.pathname === '/api/links') {
-        return await handleCreateLink(context);
-    }
-    return new Response("Endpoint POST tidak ditemukan", { status: 404 });
-}
-
-// Menyesuaikan ekspor untuk Pages Functions agar lebih eksplisit
-// Hapus `onRequest` utama dan gunakan `onRequestGet` dan `onRequestPost`
-// Cloudflare Pages akan merutekan berdasarkan metode HTTP ke fungsi-fungsi ini
-// Namun, untuk kesederhanaan dan kompatibilitas yang lebih luas, kita akan menggunakan satu file `_middleware.js`
-// Untuk proyek ini, kita akan membuat file `functions/[[path]].js` untuk menangkap semua rute.
-
-// Kode Final untuk `functions/[[path]].js`
+/**
+ * Fungsi utama yang menangani semua permintaan (router).
+ * @param {object} context - Konteks permintaan dari Cloudflare.
+ */
 export async function onRequest(context) {
     const { request } = context;
     const url = new URL(request.url);
 
+    // Rute 1: Tangani permintaan pembuatan link baru
     if (request.method === "POST" && url.pathname === "/api/links") {
         return handleCreateLink(context);
     }
     
+    // Rute 2: Tangani permintaan pengalihan link
     if (request.method === "GET") {
-        // Jangan redirect jika path adalah untuk API atau file statis
-        if (url.pathname.startsWith('/api/')) {
-            return new Response('Endpoint tidak ditemukan', { status: 404 });
-        }
-        // Jika path bukan root, coba redirect
-        if (url.pathname!== '/') {
+        // Jika path adalah root ('/'), API, atau file yang sepertinya aset statis,
+        // jangan coba redirect, biarkan Pages yang menanganinya.
+        if (url.pathname === '/' |
+
+| url.pathname.startsWith('/api/')) {
+            // Lanjutkan ke penanganan file statis oleh Pages
+        } else {
+            // Jika path bukan root dan bukan API, asumsikan itu adalah short code dan coba redirect.
             return handleRedirect(context);
         }
     }
 
-    // Jika tidak ada yang cocok, biarkan Pages menyajikan file statis dari /public
+    // Jika tidak ada rute yang cocok di atas, teruskan permintaan ke Cloudflare Pages
+    // untuk menyajikan file statis dari folder /public (seperti index.html, style.css).
     return context.next();
 }
