@@ -1,5 +1,4 @@
 // functions/[[path]].js
-
 /**
  * Fungsi untuk menangani pembuatan link pendek baru (POST requests).
  * @param {object} context - Konteks permintaan dari Cloudflare.
@@ -11,18 +10,14 @@ async function handleCreateLink({ request, env }) {
   } catch (e) {
     return new Response("Body JSON tidak valid", { status: 400 });
   }
-
   const { longUrl, customSlug } = requestBody;
-
   if (!longUrl) {
     return new Response(JSON.stringify({ error: "longUrl diperlukan" }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-
   let shortCode;
-
   if (customSlug) {
     shortCode = customSlug;
     const existingUrl = await env.URL_STORE.get(shortCode);
@@ -42,12 +37,9 @@ async function handleCreateLink({ request, env }) {
       }
     }
   }
-
   await env.URL_STORE.put(shortCode, longUrl);
-
   const baseUrl = new URL(request.url).origin;
   const shortUrl = `${baseUrl}/${shortCode}`;
-
   return new Response(JSON.stringify({ shortUrl }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
@@ -61,17 +53,13 @@ async function handleCreateLink({ request, env }) {
 async function handleRedirect({ request, env }) {
   const url = new URL(request.url);
   const shortCode = url.pathname.slice(1);
-
   if (!shortCode) {
     return new Response("Kode pendek tidak valid.", { status: 400 });
   }
-
   const longUrl = await env.URL_STORE.get(shortCode);
-
   if (longUrl === null) {
     return new Response("URL pendek tidak ditemukan.", { status: 404 });
   }
-
   return Response.redirect(longUrl, 302);
 }
 
@@ -95,7 +83,7 @@ function generateRandomString(length) {
 export async function onRequest(context) {
     const { request } = context;
     const url = new URL(request.url);
-
+    
     // Rute 1: Tangani permintaan pembuatan link baru
     if (request.method === "POST" && url.pathname === "/api/links") {
         return handleCreateLink(context);
@@ -105,16 +93,14 @@ export async function onRequest(context) {
     if (request.method === "GET") {
         // Jika path adalah root ('/'), atau dimulai dengan '/api/',
         // jangan coba redirect, biarkan Pages yang menanganinya.
-        if (url.pathname === '/' 
-
- url.pathname.startsWith('/api/')) {
+        if (url.pathname === '/' || url.pathname.startsWith('/api/')) {
             // Lanjutkan ke penanganan file statis oleh Pages
         } else {
             // Jika path bukan root dan bukan API, asumsikan itu adalah short code dan coba redirect.
             return handleRedirect(context);
         }
     }
-
+    
     // Jika tidak ada rute yang cocok di atas, teruskan permintaan ke Cloudflare Pages
     // untuk menyajikan file statis dari folder /public (seperti index.html, style.css).
     return context.next();
