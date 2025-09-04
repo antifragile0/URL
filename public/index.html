@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main>
+        <h1>URL Shortener Super Simpel</h1>
+        <p>Dibuat dengan Cloudflare Pages, Functions, dan KV.</p>
+        
+        <form id="shorten-form">
+            <div class="form-group">
+                <label for="long-url">URL Asli:</label>
+                <input type="url" id="long-url" placeholder="https://masukkan-url-panjang-anda-disini.com/" required>
+            </div>
+            <div class="form-group">
+                <label for="custom-slug">URL Kustom (Opsional):</label>
+                <input type="text" id="custom-slug" placeholder="contoh: link-rapat-penting">
+            </div>
+            <button type="submit" id="submit-button">Pendekkan!</button>
+        </form>
+
+        <div id="result-container" class="hidden">
+            <h2>Hasil:</h2>
+            <div id="result"></div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
