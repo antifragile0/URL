@@ -103,7 +103,7 @@ export async function onRequest(context) {
     
     // Rute 2: Tangani permintaan pengalihan link
     if (request.method === "GET") {
-        // Jika path adalah root ('/'), API, atau file yang sepertinya aset statis,
+        // Jika path adalah root ('/'), atau dimulai dengan '/api/',
         // jangan coba redirect, biarkan Pages yang menanganinya.
         if (url.pathname === '/' |
 
